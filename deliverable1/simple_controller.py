@@ -21,6 +21,7 @@ class D1ContentController(app_manager.RyuApp):
     # configures each switch with baseline table-miss (no match in switch flow table) flow rule to redirect unmapped traffic to the controller
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def switch_features_handler(self, ev):
+        
         # gives details about the switch to Ryu
         datapath = ev.msg.datapath
         ofproto = datapath.ofproto
@@ -42,11 +43,9 @@ class D1ContentController(app_manager.RyuApp):
         
         # check if packet is in switch memory
         if buffer_id is not None:
-            mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id,
-                                    priority=priority, match=match, instructions=inst)
+            mod = parser.OFPFlowMod(datapath=datapath, buffer_id=buffer_id, priority=priority, match=match, instructions=inst)
         else:
-            mod = parser.OFPFlowMod(datapath=datapath, priority=priority,
-                                    match=match, instructions=inst)
+            mod = parser.OFPFlowMod(datapath=datapath, priority=priority, match=match, instructions=inst)
 
         # send the rule to the switch hardware
         datapath.send_msg(mod)
@@ -115,7 +114,7 @@ class D1ContentController(app_manager.RyuApp):
             else:
                 self.add_flow(datapath, 1, match, actions)
 
-        # send current packet out of the target switch port
+        # package and send current packet out of the target switch port
         data = None
         if msg.buffer_id == ofproto.OFP_NO_BUFFER:
             data = msg.data
