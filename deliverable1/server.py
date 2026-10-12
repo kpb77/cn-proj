@@ -21,7 +21,7 @@ def handle_client(connectionSocket, addr):
         # response body and status depend on whether the request is valid
         if len(parts) >= 2 and parts[0] == "GET":
             status = "200 OK"
-            body = "yoyoyo this is the server speaking yo, PES1UG25CS255\n"
+            body = "this is the response, hey there!\n"
         else:
             status = "400 Bad Request"
             body = "bad request\n"

@@ -23,7 +23,7 @@ def run_client():
         clientSocket.connect((serverName, serverPort))
 
         # standard HTTP/1.1 GET request (almost)
-        message = f"GET /PES1UG25CS255 HTTP/1.1\r\nHost: {serverName}\r\n\r\n"
+        message = f"GET /kpb77 HTTP/1.1\r\nHost: {serverName}\r\n\r\n"
         
         # encode text string and send it across socket
         clientSocket.send(message.encode('utf-8'))

@@ -8,7 +8,7 @@ from ryu.ofproto import ofproto_v1_3
 from ryu.lib.packet import packet, ethernet, ipv4, tcp
 
 # custom token that marks a request as priority content
-TOKEN = "PES1UG25CS255"
+TOKEN = "kpb77"
 
 # port that the content server listens on
 SERVER_PORT = 8080
