@@ -9,31 +9,37 @@ def run_client():
     # extract server destination IP from command line argument, default to h2 (10.0.0.2) in case IP not passed
     serverName = sys.argv[1] if len(sys.argv) > 1 else '10.0.0.2'
 
+    # request path from 2nd command line argument, default is the token
+    path = sys.argv[2] if len(sys.argv) > 2 else 'kpb77'
+
     serverPort = 8080
 
     # initialize IPv4 TCP socket
     clientSocket = socket(AF_INET, SOCK_STREAM)
-    
+
+    # give up after 5 seconds instead of hanging forever
+    clientSocket.settimeout(5)
+
     # record start time to calculate RTT
     start_time = time.time()
-    
+
     try:
 
         # initiate TCP 3-way handshake with server
         clientSocket.connect((serverName, serverPort))
 
         # standard HTTP/1.1 GET request (almost)
-        message = f"GET /kpb77 HTTP/1.1\r\nHost: {serverName}\r\n\r\n"
-        
+        message = f"GET /{path} HTTP/1.1\r\nHost: {serverName}\r\n\r\n"
+
         # encode text string and send it across socket
         clientSocket.send(message.encode('utf-8'))
 
         # read response from server, max size of which is 4096 bytes
         modifiedMessage = clientSocket.recv(4096)
-        
+
         # calculate RTT
         elapsed = time.time() - start_time
-        
+
         # print performance metrics with server response
         print(f"\nRTT: {elapsed:.4f}s and response from server: ")
         print(modifiedMessage.decode('utf-8', errors='ignore'))
@@ -41,7 +47,7 @@ def run_client():
     # handle routing failures or timeouts gracefully
     except Exception as e:
         print(f"connection failed: {e}")
-        
+
     # socket closed
     finally:
         clientSocket.close()
