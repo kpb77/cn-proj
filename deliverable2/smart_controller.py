@@ -54,9 +54,9 @@ LATENCY = {
 MAX_SERVER_LOAD = 5
 
 # fake source used by the controller to probe the health of the servers
-PROBE_IP = '10.0.0.250'
-PROBE_MAC = '00:00:00:00:00:fa'
-PROBE_PORT = 40000
+PROBE_IP = '10.0.0.6'
+PROBE_MAC = '00:00:00:00:00:06'
+PROBE_PORT = 7070
 
 # seconds between two monitoring rounds (port statistics and server probes)
 MONITOR_INTERVAL = 2
