@@ -172,7 +172,7 @@
       h2 pkill -f server.py
       ```
       
-  *   ```
+      ```
       h3 python3 -u server.py > /tmp/h3.log 2>&1 &
       ```
       wait about 6 seconds and run this
