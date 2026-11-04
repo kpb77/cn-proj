@@ -18,7 +18,7 @@
     * __`topology.py`:__ Mininet Python script with the Diamond Topology (clients, servers, switches, links, one fast link with 2ms delay and one slow link with 10ms delay), added `add_location_latency()` which uses `tc` (`prio` + `netem`) on `h2` and `h3` to delay the replies going to each client by the latency of that client-server pair
     * __`client.py`:__ Python implementation of low-level IPv4 TCP Sockets, sends the HTTP/1.1 request for a file, takes responses until the server closes the connection (big files arrive completely), calculates RTT and throughput, and saves the received file
     * __`server.py`:__ multi-threaded content server (using daemon threads), serves any file from the `content` folder (type detected using `mimetypes`), streams it in 1 MB chunks, returns `404` for missing files and for paths trying to leave the folder (a crucial security feature), `400` for malformed requests
-    * __`simple_controller.py`:__ Ryu SDN Flow Controller script, some features implemented are proxy ARP, virtual IP with per-connection NAT, health probes, proximity & health & load based server selection, port statistics monitoring, link and server failure handling, flow flushing for rerouting and recovery, and a `static` baseline mode for benchmarking improvements
+    * __`smart_controller.py`:__ Ryu SDN Flow Controller script, some features implemented are proxy ARP, virtual IP with per-connection NAT, health probes, proximity & health & load based server selection, port statistics monitoring, link and server failure handling, flow flushing for rerouting and recovery, and a `static` baseline mode for benchmarking improvements
   * __Communication Flow and Expected Network Behavior:__
     * __ARP Resolution:__ the clients send an ARP Request for the virtual IP `10.0.0.5`, the request reaches `s1` and the table-miss rule sends it to the controller, which answers it itself with the virtual MAC of the proxy server
     * __TCP Handshake & Server Selection:__ the client sends the `SYN` to the virtual IP, `s1` has no rule for it and sends a `Packet-In` to the controller, the controller selects the server, first removing servers that are down (health), then taking the one with the lowest latency to this client (proximity), skipping it if it already has `MAX_SERVER_LOAD` active connections (load), then it selects the path (fast, or slow if the fast path is down)
@@ -33,7 +33,7 @@
   * __Error handling:__ `404` for unknown files and path tricks, `400` for malformed requests, idle client timeout (15 seconds) on the server, connection refusal and timeout handling on the client
   * Check out `client.py` and `server.py` to see the implementation, abundant comments are included in the implementation to explain how the code works
 ### __Dynamic SDN Functionality__
-  * The SDN is implemented in `simple_controller.py`, every feature is done by the controller real time dynamically by installing, replacing or deleting OpenFlow flow rules
+  * The SDN is implemented in `smart_controller.py`, every feature is done by the controller real time dynamically by installing, replacing or deleting OpenFlow flow rules
   * __Server selection (proximity & health & load):__ `select_server()` takes the servers that are alive, sorts them by the latency to the requesting client (`LATENCY` table), and uses the closest one with fewer than `MAX_SERVER_LOAD` (5) active connections, if all are overloaded the least loaded one is used, the number of active connections is tracked by the controller per server
   * __Server health monitoring:__ every `MONITOR_INTERVAL` (2 s) the controller sends a TCP `SYN` probe from a fake host (`10.0.0.250`) to port 8080 of every server, a `SYN-ACK` means the content server is accepting connections (so a killed server process is detected, not only a dead link), the controller then sends a `RST` so no half open connections pile up in the server backlog, a server that did not answer for `PROBE_TIMEOUT` (6 s) is declared down, a server whose switch port goes down is also declared down, and it is added back as soon as it answers again
   * __Network monitoring:__ every 2 seconds the controller requests the port statistics of all switches and prints the throughput of every switch-to-switch link in Mbps (only for links that carry traffic), example: `monitor | s1 -> s2 | 9.41 Mbps`
@@ -41,7 +41,7 @@
   * __Link failure detection and rerouting:__ OpenFlow `Port-Status` events tell the controller when a switch-to-switch link goes down or up, the controller recalculates which paths are usable, deletes all flows from all switches (and reinstalls the table-miss rule), and the next packet of every connection triggers a new `Packet-In`, so the connection is routed again over a working path, this also gives recovery when the link comes back (traffic returns to the fast path)
   * __Virtual IP (anycast) with NAT:__ per-connection flows (exact match on the TCP ports) rewrite the destination IP and MAC to the selected mirror at `s1`, and the source IP and MAC back to the virtual IP at `s4`, direct host-to-host traffic (ping, iperf) is not touched by NAT
   * __Proxy ARP:__ the controller answers all ARP requests (hosts, virtual IP, probe IP) itself
-  * __Static baseline mode:__ starting the controller with `MODE=static ryu-manager simple_controller.py` gives the baseline used for the comparison: the virtual IP always goes to one fixed server (`h2`), always over the fast path, no health based selection, no load balancing, basic token handling, and no reaction to link or server failures
+  * __Static baseline mode:__ starting the controller with `MODE=static ryu-manager smart_controller.py` gives the baseline used for the comparison: the virtual IP always goes to one fixed server (`h2`), always over the fast path, no health based selection, no load balancing, basic token handling, and no reaction to link or server failures
 ### __Challenging Scenarios / Robustness__
   * __Scenario 1 - mirror server failure:__ the server process of a mirror is killed, the controller detects it within about 6 seconds, new requests are served by the other mirror, when the mirror is restarted it is used again
   * __Scenario 2 - primary link failure:__ when the fast link `s1-s2` is taken down, all new connections use the slow path, when the link is repaired traffic returns to the fast path
@@ -77,9 +77,9 @@
         and this
         
         ```
-        ryu-manager simple_controller.py
+        ryu-manager smart_controller.py
         ```
-        this activates the Ryu virtual environment and starts the Ryu SDN Flow Controller in the proposed (`dynamic`) mode, for the baseline static routing experiments use `MODE=static ryu-manager simple_controller.py`
+        this activates the Ryu virtual environment and starts the Ryu SDN Flow Controller in the proposed (`dynamic`) mode, for the baseline static routing experiments use `MODE=static ryu-manager smart_controller.py`
       * In the second terminal window (`term2`) type this
         ```
         sudo python3 topology.py
@@ -252,4 +252,4 @@
       h1 python3 client.py hello.txt 10.0.0.3
       ```
       this prints the standard `connection failed` message (direct IPs are not load balanced or failed over, only the virtual IP is)
-  * __Baseline comparison:__ stop everything, run `sudo mn -c`, start the controller with `MODE=static ryu-manager simple_controller.py`, start the topology and the servers again, and repeat the test cases to observe the differences
+  * __Baseline comparison:__ stop everything, run `sudo mn -c`, start the controller with `MODE=static ryu-manager smart_controller.py`, start the topology and the servers again, and repeat the test cases to observe the differences
